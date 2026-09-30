@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Snake</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #111;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        h1 {
+            margin: 0 0 18px;
+            font-size: 40px;
+        }
+
+        #game {
+            width: 400px;
+            height: 400px;
+            background: #000;
+            position: relative;
+            border: 6px solid #333;
+            border-radius: 10px;
+            box-shadow:
+                0 0 0 2px #111,
+                0 0 30px rgba(0, 255, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .snake {
+            width: 22px;
+            height: 22px;
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(
+                circle at 35% 30%,
+                #b8ffb8,
+                #20d820 45%,
+                #078807 100%
+            );
+            box-shadow: 0 0 8px rgba(0, 255, 0, 0.7);
+            z-index: 2;
+        }
+
+        .head {
+            width: 28px;
+            height: 28px;
+            position: absolute;
+            border-radius: 50%;
+            background: radial-gradient(
+                circle at 35% 30%,
+                #d0ffd0,
+                #20e020 45%,
+                #067806 100%
+            );
+            border: 2px solid #005f00;
+            box-shadow: 0 0 14px rgba(0, 255, 0, 0.8);
+            z-index: 5;
+        }
+
+        .eye {
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background: white;
+            border: 1px solid #111;
+            border-radius: 50%;
+        }
+
+        .eye::after {
+            content: "";
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: #000;
+            border-radius: 50%;
+            top: 1px;
+            left: 1px;
+        }
+
+        .head.right .eye1 {
+            top: 4px;
+            right: 3px;
+        }
+
+        .head.right .eye2 {
+            bottom: 4px;
+            right: 3px;
+        }
+
+        .head.left .eye1 {
+            top: 4px;
+            left: 3px;
+        }
+
+        .head.left .eye2 {
+            bottom: 4px;
+            left: 3px;
+        }
+
+        .head.up .eye1 {
+            top: 3px;
+            left: 4px;
+        }
+
+        .head.up .eye2 {
+            top: 3px;
+            right: 4px;
+        }
+
+        .head.down .eye1 {
+            bottom: 3px;
+            left: 4px;
+        }
+
+        .head.down .eye2 {
+            bottom: 3px;
+            right: 4px;
+        }
+
+        #food {
+            width: 20px;
+            height: 20px;
+            position: absolute;
+            background: radial-gradient(
+                circle at 35% 30%,
+                #ff7777,
+                #ff2020 50%,
+                #b50000
+            );
+            border-radius: 50%;
+            box-shadow: 0 0 12px red;
+            z-index: 1;
+        }
+
+        /* أزرار الحركة فوق */
+        #mobileControls {
+            margin-top: 15px;
+            width: 180px;
+
+            display: grid;
+            grid-template-columns: 60px 60px 60px;
+            grid-template-rows: 60px 60px;
+
+            gap: 5px;
+
+            direction: ltr;
+        }
+
+        .moveButton {
+            width: 60px;
+            height: 60px;
+            padding: 0;
+
+            background: #222;
+            color: white;
+
+            border: 2px solid #444;
+            border-radius: 15px;
+
+            font-size: 28px;
+            font-weight: bold;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            touch-action: manipulation;
+            user-select: none;
+        }
+
+        .moveButton:active {
+            transform: scale(0.9);
+            background: #333;
+        }
+
+        #up {
+            grid-column: 2;
+            grid-row: 1;
+        }
+
+        #left {
+            grid-column: 1;
+            grid-row: 2;
+        }
+
+        #down {
+            grid-column: 2;
+            grid-row: 2;
+        }
+
+        #right {
+            grid-column: 3;
+            grid-row: 2;
+        }
+
+        /* أزرار التحكم */
+        #controls {
+            margin-top: 12px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            border: none;
+            border-radius: 12px;
+            padding: 11px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        #pauseButton {
+            background: orange;
+            color: #000;
+        }
+
+        #restartButton {
+            background: lime;
+            color: #000;
+        }
+
+        #gameOver {
+            display: none;
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+
+            z-index: 20;
+        }
+
+        #gameOver h2 {
+            font-size: 40px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-height: 750px) {
+
+            h1 {
+                font-size: 30px;
+                margin-bottom: 10px;
+            }
+
+            #game {
+                width: 320px;
+                height: 320px;
+            }
+
+            #mobileControls {
+                margin-top: 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Snake</h1>
+
+    <div id="game">
+
+        <div id="food"></div>
+
+        <div id="gameOver">
+            <h2>خسرت!</h2>
+        </div>
+
+    </div>
+
+    <!-- أزرار الحركة فوق -->
+    <div id="mobileControls">
+
+        <button class="moveButton" id="up">↑</button>
+
+        <button class="moveButton" id="left">←</button>
+
+        <button class="moveButton" id="down">↓</button>
+
+        <button class="moveButton" id="right">→</button>
+
+    </div>
+
+    <!-- الإيقاف وإعادة اللعب تحت -->
+    <div id="controls">
+
+        <button id="pauseButton">
+            إيقاف
+        </button>
+
+        <button id="restartButton">
+            إعادة اللعب
+        </button>
+
+    </div>
+
+    <script>
+
+        let snake = [
+            { x: 100, y: 100 }
+        ];
+
+        let food = {
+            x: 200,
+            y: 200
+        };
+
+        let direction = "right";
+        let gameRunning = true;
+        let paused = false;
+
+
+        function draw() {
+
+            document
+                .querySelectorAll(".snake, .head")
+                .forEach(function(part) {
+                    part.remove();
+                });
+
+
+            snake.forEach(function(part, index) {
+
+                let block = document.createElement("div");
+
+
+                if (index === 0) {
+
+                    block.className = "head " + direction;
+
+                    block.style.left =
+                        (part.x - 3) + "px";
+
+                    block.style.top =
+                        (part.y - 3) + "px";
+
+
+                    let eye1 =
+                        document.createElement("div");
+
+                    eye1.className =
+                        "eye eye1";
+
+
+                    let eye2 =
+                        document.createElement("div");
+
+                    eye2.className =
+                        "eye eye2";
+
+
+                    block.appendChild(eye1);
+                    block.appendChild(eye2);
+
+                } else {
+
+                    block.className = "snake";
+
+                    block.style.left =
+                        (part.x - 1) + "px";
+
+                    block.style.top =
+                        (part.y - 1) + "px";
+                }
+
+
+                document
+                    .getElementById("game")
+                    .appendChild(block);
+
+            });
+
+
+            document.getElementById("food")
+                .style.left = food.x + "px";
+
+            document.getElementById("food")
+                .style.top = food.y + "px";
+        }
+
+
+        function changeDirection(newDirection) {
+
+            if (!gameRunning || paused) return;
+
+
+            if (
+                newDirection === "up" &&
+                direction !== "down"
+            ) {
+                direction = "up";
+            }
+
+            if (
+                newDirection === "down" &&
+                direction !== "up"
+            ) {
+                direction = "down";
+            }
+
+            if (
+                newDirection === "left" &&
+                direction !== "right"
+            ) {
+                direction = "left";
+            }
+
+            if (
+                newDirection === "right" &&
+                direction !== "left"
+            ) {
+                direction = "right";
+            }
+        }
+
+
+        document.addEventListener(
+            "keydown",
+            function(event) {
+
+                if (event.key === "ArrowUp")
+                    changeDirection("up");
+
+                if (event.key === "ArrowDown")
+                    changeDirection("down");
+
+                if (event.key === "ArrowLeft")
+                    changeDirection("left");
+
+                if (event.key === "ArrowRight")
+                    changeDirection("right");
+
+            }
+        );
+
+
+        /* أزرار الهاتف */
+
+        document.getElementById("up")
+            .addEventListener("pointerdown", function(e) {
+                e.preventDefault();
+                changeDirection("up");
+            });
+
+        document.getElementById("down")
+            .addEventListener("pointerdown", function(e) {
+                e.preventDefault();
+                changeDirection("down");
+            });
+
+        document.getElementById("left")
+            .addEventListener("pointerdown", function(e) {
+                e.preventDefault();
+                changeDirection("left");
+            });
+
+        document.getElementById("right")
+            .addEventListener("pointerdown", function(e) {
+                e.preventDefault();
+                changeDirection("right");
+            });
+
+
+        function move() {
+
+            if (!gameRunning || paused) return;
+
+
+            let head = {
+                x: snake[0].x,
+                y: snake[0].y
+            };
+
+
+            if (direction === "right")
+                head.x += 20;
+
+            if (direction === "left")
+                head.x -= 20;
+
+            if (direction === "up")
+                head.y -= 20;
+
+            if (direction === "down")
+                head.y += 20;
+
+
+            if (
+                head.x < 0 ||
+                head.x > 380 ||
+                head.y < 0 ||
+                head.y > 380
+            ) {
+
+                gameOver();
+                return;
+            }
+
+
+            snake.unshift(head);
+
+
+            if (
+                head.x === food.x &&
+                head.y === food.y
+            ) {
+
+                placeFood();
+
+            } else {
+
+                snake.pop();
+            }
+
+
+            draw();
+        }
+
+
+        function placeFood() {
+
+            food.x =
+                Math.floor(Math.random() * 20) * 20;
+
+            food.y =
+                Math.floor(Math.random() * 20) * 20;
+
+
+            for (let part of snake) {
+
+                if (
+                    food.x === part.x &&
+                    food.y === part.y
+                ) {
+
+                    placeFood();
+                    return;
+                }
+            }
+        }
+
+
+        function gameOver() {
+
+            gameRunning = false;
+
+            document.getElementById("gameOver")
+                .style.display = "flex";
+        }
+
+
+        document.getElementById("pauseButton")
+            .addEventListener("click", function() {
+
+                if (!gameRunning) return;
+
+                paused = !paused;
+
+                this.textContent =
+                    paused ? "استئناف" : "إيقاف";
+            });
+
+
+        document.getElementById("restartButton")
+            .addEventListener("click", function() {
+
+                snake = [
+                    { x: 100, y: 100 }
+                ];
+
+                food = {
+                    x: 200,
+                    y: 200
+                };
+
+                direction = "right";
+                gameRunning = true;
+                paused = false;
+
+                document.getElementById("pauseButton")
+                    .textContent = "إيقاف";
+
+                document.getElementById("gameOver")
+                    .style.display = "none";
+
+                draw();
+            });
+
+
+        draw();
+
+        setInterval(move, 150);
+
+    </script>
+
+</body>
+</html>
